@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word2Vec | TensorFlow.JS</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.0.0/dist/tf.min.js"></script>
+    <!-- FORM CSS: https://codepen.io/mican/pen/dRWxZe?editors=1010 -->
+    <style>
+        html {
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        body {
+            background-color: #111111;
+            font-family: "Titillium Web", sans-serif;
+        }
+        
+        @media screen and (min-width: 40em) {
+            body {
+                font-size: 1.25em;
+            }
+        }
+        
+        .form .button,
+        .form .message,
+        .customSelect,
+        .form .select,
+        .form .textarea,
+        .form .text-input,
+        .form .option-input+label,
+        .form .checkbox-input+label,
+        .form .label {
+            padding: 0.75em 1em;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            outline: none;
+            line-height: normal;
+            border-radius: 0;
+            border: none;
+            background: none;
+            display: block;
+        }
+        
+        .form .label {
+            font-weight: bold;
+            color: white;
+            padding-top: 0;
+            padding-left: 0;
+            letter-spacing: 0.025em;
+            font-size: 1.125em;
+            line-height: 1.25;
+            position: relative;
+            z-index: 100;
+        }
+        
+        .required .form .label:after,
+        .form .required .label:after {
+            content: " *";
+            color: #E8474C;
+            font-weight: normal;
+            font-size: 0.75em;
+            vertical-align: top;
+        }
+        
+        .customSelect,
+        .form .select,
+        .form .textarea,
+        .form .text-input,
+        .form .option-input+label,
+        .form .checkbox-input+label {
+            font: inherit;
+            line-height: normal;
+            width: 100%;
+            box-sizing: border-box;
+            background: #222222;
+            color: white;
+            position: relative;
+        }
+        
+        .customSelect:placeholder,
+        .form .select:placeholder,
+        .form .textarea:placeholder,
+        .form .text-input:placeholder,
+        .form .option-input+label:placeholder,
+        .form .checkbox-input+label:placeholder {
+            color: white;
+        }
+        
+        .customSelect:-webkit-autofill,
+        .form .select:-webkit-autofill,
+        .form .textarea:-webkit-autofill,
+        .form .text-input:-webkit-autofill,
+        .form .option-input+label:-webkit-autofill,
+        .form .checkbox-input+label:-webkit-autofill {
+            box-shadow: 0 0 0px 1000px #111111 inset;
+            -webkit-text-fill-color: white;
+            border-top-color: #111111;
+            border-left-color: #111111;
+            border-right-color: #111111;
+        }
+        
+        .customSelect:not(:focus):not(:active).error,
+        .form .select:not(:focus):not(:active).error,
+        .form .textarea:not(:focus):not(:active).error,
+        .form .text-input:not(:focus):not(:active).error,
+        .form .option-input+label:not(:focus):not(:active).error,
+        .form .checkbox-input+label:not(:focus):not(:active).error,
+        .error .customSelect:not(:focus):not(:active),
+        .error .form .select:not(:focus):not(:active),
+        .form .error .select:not(:focus):not(:active),
+        .error .form .textarea:not(:focus):not(:active),
+        .form .error .textarea:not(:focus):not(:active),
+        .error .form .text-input:not(:focus):not(:active),
+        .form .error .text-input:not(:focus):not(:active),
+        .error .form .option-input+label:not(:focus):not(:active),
+        .form .error .option-input+label:not(:focus):not(:active),
+        .error .form .checkbox-input+label:not(:focus):not(:active),
+        .form .error .checkbox-input+label:not(:focus):not(:active) {
+            background-size: 8px 8px;
+            background-image: linear-gradient(135deg, rgba(232, 71, 76, 0.5), rgba(232, 71, 76, 0.5) 25%, transparent 25%, transparent 50%, rgba(232, 71, 76, 0.5) 50%, rgba(232, 71, 76, 0.5) 75%, transparent 75%, transparent);
+            background-repeat: repeat;
+        }
+        
+        .form:not(.has-magic-focus) .customSelect.customSelectFocus,
+        .form:not(.has-magic-focus) .customSelect:active,
+        .form:not(.has-magic-focus) .select:active,
+        .form:not(.has-magic-focus) .textarea:active,
+        .form:not(.has-magic-focus) .text-input:active,
+        .form:not(.has-magic-focus) .option-input+label:active,
+        .form:not(.has-magic-focus) .checkbox-input+label:active,
+        .form:not(.has-magic-focus) .customSelect:focus,
+        .form:not(.has-magic-focus) .select:focus,
+        .form:not(.has-magic-focus) .textarea:focus,
+        .form:not(.has-magic-focus) .text-input:focus,
+        .form:not(.has-magic-focus) .option-input+label:focus,
+        .form:not(.has-magic-focus) .checkbox-input+label:focus {
+            background: #4E4E4E;
+        }
+        
+        .form .message {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            z-index: 100;
+            font-size: 0.625em;
+            color: white;
+        }
+        
+        .form .option-input,
+        .form .checkbox-input {
+            border: 0;
+            clip: rect(0 0 0 0);
+            height: 1px;
+            margin: -1px;
+            overflow: hidden;
+            padding: 0;
+            position: absolute;
+            width: 1px;
+        }
+        
+        .form .option-input+label,
+        .form .checkbox-input+label {
+            display: inline-block;
+            width: auto;
+            color: #4E4E4E;
+            position: relative;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            cursor: pointer;
+        }
+        
+        .form .option-input:focus+label,
+        .form .checkbox-input:focus+label,
+        .form .option-input:active+label,
+        .form .checkbox-input:active+label {
+            color: #4E4E4E;
+        }
+        
+        .form .option-input:checked+label,
+        .form .checkbox-input:checked+label {
+            color: white;
+        }
+        
+        .form .button {
+            font: inherit;
+            line-height: normal;
+            cursor: pointer;
+            background: #E8474C;
+            color: white;
+            font-weight: bold;
+            width: auto;
+            margin-left: auto;
+            font-weight: bold;
+            padding-left: 2em;
+            padding-right: 2em;
+        }
+        
+        .form .button:hover,
+        .form .button:focus,
+        .form .button:active {
+            color: white;
+            border-color: white;
+        }
+        
+        .form .button:active {
+            position: relative;
+            top: 1px;
+            left: 1px;
+        }
+        
+        body {
+            padding: 2em;
+        }
+        
+        .form {
+            max-width: 40em;
+            margin: 0 auto;
+            position: relative;
+            display: flex;
+            flex-flow: row wrap;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        
+        .form .field {
+            width: 100%;
+            margin: 0 0 1.5em 0;
+        }
+        
+        @media screen and (min-width: 40em) {
+            .form .field.half {
+                width: calc(50% - 1px);
+            }
+        }
+        
+        .form .field.last {
+            margin-left: auto;
+        }
+        
+        .form .textarea {
+            max-width: 100%;
+        }
+        
+        .form .select {
+            text-indent: 0.01px;
+            text-overflow: "" !important;
+        }
+        
+        .form .select::-ms-expand {
+            display: none;
+        }
+        
+        .form .checkboxes,
+        .form .options {
+            padding: 0;
+            margin: 0;
+            list-style-type: none;
+            overflow: hidden;
+        }
+        
+        .form .checkbox,
+        .form .option {
+            float: left;
+            margin: 1px;
+        }
+        
+        .customSelect {
+            pointer-events: none;
+        }
+        
+        .customSelect:after {
+            content: "";
+            pointer-events: none;
+            width: 0.5em;
+            height: 0.5em;
+            border-style: solid;
+            border-color: white;
+            border-width: 0 3px 3px 0;
+            position: absolute;
+            top: 50%;
+            margin-top: -0.625em;
+            right: 1em;
+            transform-origin: 0 0;
+            transform: rotate(45deg);
+        }
+        
+        .customSelect.customSelectFocus:after {
+            border-color: white;
+        }
+        
+        .magic-focus {
+            position: absolute;
+            z-index: 0;
+            width: 0;
+            pointer-events: none;
+            background: rgba(255, 255, 255, 0.15);
+            transition: top 0.2s, left 0.2s, width 0.2s;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            transform-style: preserve-3d;
+            will-change: top, left, width;
+            transform-origin: 0 0;
+        }
+    </style>
+    <style>
+        form h2 {
+            color: white;
+        }
+        form h2 a {
+            color: #853438 !important;
+            text-decoration: none !important;
+        }
+        .loading {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 10000;
+            background-color: #000;
+            color: white;
+            display: grid;
+            place-items: center;
+        }
+        label span {
+            font-weight: normal;
+            font-style: italic;
+            opacity: 0.6;
+        }
+        .mb-0 {
+            margin-bottom: 0 !important;
+        }
+        .sep {
+            border: 2px solid #853538;
+            margin: 40px auto;
+            width: 100%;
+        }
+        .float-right {
+            float: right;
+        }
+        .d-inline-block {
+            display: inline-block !important;
+        }
+        .third {
+            width: calc(33.33% - 4px) !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- LOADING SCREEN -->
+    <div class="loading">
+        <h1>Loading Model...</h1>
+    </div>
+
+    <!-- FIND NEAREST -->
+    <form class="form" id="form-nearest" onsubmit="return false;">
+
+        <h2>Word2Vec Demo <a href="https://github.com/ml5js/ml5-data-and-models/tree/main/models/wordvecs/common-english">| Models</a><a href="https://ml5js.org/reference/api-Word2vec/"> | Inspired by</a><a href="https://github.com/ml5js/ml5-library/blob/93e6024b8c912bc85a6d69f75b156cdeb46e3afb/src/Word2vec/index.js"> | Original Code</a></h2>
+
+        <p class="field">
+            <label class="label required" for="nearest">Nearest: <span>try 'altogether', 'godfather', 'space', 'queen', 'greece', 'laptop', 'java', 'slavery', etc.</span></label>
+            <input class="text-input" id="nearest" name="nearest" required type="text" value="laptop">
+        </p>
+        <p class="field mb-0">
+            <input class="button" type="button" id="find-nearest" value="Find Nearest">
+        </p>
+        <p class="field">
+            <label class="label" for="nearest-results">Nearest Results:</label>
+            <textarea class="textarea" cols="50" id="nearest-results" name="nearest-results" rows="10"></textarea>
+        </p>
+    </form>
+    
+    <!-- CALCULATE SIMILARITY -->
+    <form class="form" id="form-similarity">
+        <hr class="sep">
+
+        <p class="field">
+            <label class="label" >Calculate Similarity: <span>try 'microsoft' + 'mango', 'microsoft' + 'apple', 'microsoft' + 'windows', 'microsoft' + 'doors', etc.</span></label>
+        </p>
+        <p class="field half">
+            <label class="label" for="word-a">Word A</label>
+            <input class="text-input" id="word-a" name="word-a" type="text" value="microsoft">
+        </p>
+        <p class="field half">
+            <label class="label" for="word-b">Word B</label>
+            <input class="text-input" id="word-b" name="word-b" type="text" value="mango">
+        </p>
+        <p class="field mb-0">
+            <input class="button d-inline-block float-right" style="background-color: yellowgreen; margin-left: 10px;" type="button" id="similarity" value="  0%">
+            <input class="button d-inline-block float-right" type="button" id="calc-similarity" value="Calculate Similarity">
+        </p>
+    </form>
+
+    <!-- ADD VECTORS -->
+    <form class="form" id="form-addition">
+        <hr class="sep">
+
+        <p class="field">
+            <label class="label" >Add Word Vectors: <span>try 'plural' + 'banana', 'boy' + 'girl', 'boys' + 'girls', 'greece' + 'turkey', 'violence' + 'ideology', etc.</span></label>
+        </p>
+        <p class="field half">
+            <label class="label" for="word-a">Word A</label>
+            <input class="text-input" id="add-word-a" name="word-a" type="text" value="boy">
+        </p>
+        <p class="field half">
+            <label class="label" for="word-b">Word B</label>
+            <input class="text-input" id="add-word-b" name="word-b" type="text" value="girl">
+        </p>
+        <p class="field">
+            <input class="text-input d-inline-block" style="width: 50%" id="sum" type="text">
+            <input class="button d-inline-block float-right" type="button" id="add" value="Add Words">
+        </p>
+    </form>
+
+    <!-- SUBTRACT VECTORS -->
+    <form class="form" id="form-subtraction">
+        <hr class="sep">
+
+        <p class="field">
+            <label class="label" >Subtract Word Vectors: <span>try 'human' - 'plural', 'obama' - 'president' etc.</span></label>
+        </p>
+        <p class="field half">
+            <label class="label" for="word-a">Word A</label>
+            <input class="text-input" id="sub-word-a" name="word-a" type="text" value="human">
+        </p>
+        <p class="field half">
+            <label class="label" for="word-b">Word B</label>
+            <input class="text-input" id="sub-word-b" name="word-b" type="text" value="plural">
+        </p>
+        <p class="field">
+            <input class="text-input d-inline-block" style="width: 50%" id="difference" type="text">
+            <input class="button d-inline-block float-right" type="button" id="subtract" value="Add Words">
+        </p>
+    </form>
+    
+    <!-- ADD + SUBTRACT VECTORS (WORD ANALOGY) -->
+    <form class="form" id="form-analogy">
+        <hr class="sep">
+
+        <p class="field">
+            <label class="label" >Word Analogy: ( wordA - wordB ) - wordC <span>try 'russia' - 'china' + 'beijing', 'italy' - 'venice' + 'athens' etc.</span></label>
+        </p>
+        <p class="field third">
+            <label class="label" for="analogyA">( Word A</label>
+            <input class="text-input" id="analogyA" name="analogyA" type="text" value="italy">
+        </p>
+        <p class="field third">
+            <label class="label" for="analogyB">- Word B )</label>
+            <input class="text-input" id="analogyB" name="analogyB" type="text" value="venice">
+        </p>
+        <p class="field third">
+            <label class="label" for="analogyC">+ Word C</label>
+            <input class="text-input" id="analogyC" name="analogyC" type="text" value="athens">
+        </p>
+        <p class="field">
+            <input class="text-input d-inline-block" style="width: 50%" id="analogy" type="text">
+            <input class="button d-inline-block float-right" type="button" id="run-analogy" value="Calculate Analogy">
+        </p>
+    </form>
+
+    <!-- OTHER METHODS -->
+    <form class="form">
+        <hr class="sep">
+
+        <p class="field">
+            <label class="label" ><a href="https://ml5js.org/reference/api-Word2vec/" style="text-decoration: none; color: white;">&rtrif; Other Vector Methods</a></label>
+        </p>
+    </form>
+
+
+    <script>
+        class Word2Vec {
+            constructor(modelPath, callback) {
+                this.model = {};
+                this.modelPath = modelPath;
+                this.modelSize = 0;
+                this.modelLoaded = false;
+                this.callback = callback;
+                this.loadModel();
+            }
+
+            async loadModel() {
+                const response = await fetch(this.modelPath);
+                const data = await response.json();
+
+                Object.keys(data.vectors).forEach((word) => {
+                    this.model[word] = tf.tensor1d(data.vectors[word]);
+                });
+                this.modelSize = Object.keys(this.model).length;
+                this.modelLoaded = true;
+                this.callback();
+                return this;
+            }
+
+            dispose(callback) {
+                Object.values(this.model).forEach(x => x.dispose());
+                if (callback) {
+                    callback();
+                }
+            }
+
+            async add(inputs, maxOrCb, cb) {
+                const {
+                    max,
+                    callback
+                } = Word2Vec.parser(maxOrCb, cb, 10);
+
+                await this.ready;
+                return tf.tidy(() => {
+                    const sum = Word2Vec.addOrSubtract(this.model, inputs, 'ADD');
+                    const result = Word2Vec.nearest(this.model, sum, inputs.length, inputs.length + max);
+                    if (callback) {
+                        callback(undefined, result);
+                    }
+                    return result;
+                });
+            }
+
+            async subtract(inputs, maxOrCb, cb) {
+                const {
+                    max,
+                    callback
+                } = Word2Vec.parser(maxOrCb, cb, 10);
+
+                await this.ready;
+                return tf.tidy(() => {
+                    const subtraction = Word2Vec.addOrSubtract(this.model, inputs, 'SUBTRACT');
+                    const result = Word2Vec.nearest(this.model, subtraction, inputs.length, inputs.length + max);
+                    if (callback) {
+                        callback(undefined, result);
+                    }
+                    return result;
+                });
+            }
+
+            async average(inputs, maxOrCb, cb) {
+                const {
+                    max,
+                    callback
+                } = Word2Vec.parser(maxOrCb, cb, 10);
+
+                await this.ready;
+                return tf.tidy(() => {
+                    const sum = Word2Vec.addOrSubtract(this.model, inputs, 'ADD');
+                    const avg = tf.div(sum, tf.tensor(inputs.length));
+                    const result = Word2Vec.nearest(this.model, avg, inputs.length, inputs.length + max);
+                    if (callback) {
+                        callback(undefined, result);
+                    }
+                    return result;
+                });
+            }
+
+            async nearest(input, maxOrCb, cb) {
+                const {
+                    max,
+                    callback
+                } = Word2Vec.parser(maxOrCb, cb, 10);
+
+                await this.ready;
+                const vector = this.model[input];
+                let result;
+                if (vector) {
+                    result = Word2Vec.nearest(this.model, vector, 1, max + 1);
+                } else {
+                    result = null;
+                }
+
+                if (callback) {
+                    callback(undefined, result);
+                }
+                return result;
+            }
+
+            async similarity(word1, word2) {
+                return tf.dot(this.model[word1], this.model[word2]).data();
+            }
+
+            getModel() {
+                return this.model;
+            }
+
+            getWordVector(word) {
+                return this.model[word];
+            }
+
+            /* Given a set of your own words, find the nearest neighbors */
+            async nearestFromSet(input, set, maxOrCb, cb) {
+                const {
+                    max,
+                    callback
+                } = Word2Vec.parser(maxOrCb, cb, 10);
+                await this.ready;
+                const vector = this.model[input];
+
+                // If the input vector isn't found, bail out early.
+                if (!vector) {
+                    if (callback) callback(undefined, null);
+                    return null;
+                }
+
+                const miniModel = {};
+                set.forEach((word) => {
+                    if (this.model[word]) miniModel[word] = this.model[word];
+                });
+
+                // If none of the words in the set are found, also bail out
+                if (!miniModel.length) {
+                    if (callback) callback(undefined, null);
+                    return null;
+                }
+
+                const result = Word2Vec.nearest(miniModel, vector, 1, max + 1);
+
+                if (callback) {
+                    callback(undefined, result);
+                }
+                return result;
+            }
+
+            async getRandomWord(callback) {
+                await this.ready;
+                const words = Object.keys(this.model);
+                const result = words[Math.floor(Math.random() * words.length)];
+                if (callback) {
+                    callback(undefined, result);
+                }
+                return result;
+            }
+
+            static parser(maxOrCallback, cb, defaultMax) {
+                let max = defaultMax;
+                let callback = cb;
+
+                if (typeof maxOrCallback === 'function') {
+                    callback = maxOrCallback;
+                } else if (typeof maxOrCallback === 'number') {
+                    max = maxOrCallback;
+                }
+                return {
+                    max,
+                    callback
+                };
+            }
+
+            static addOrSubtract(model, values, operation) {
+                return tf.tidy(() => {
+                    const vectors = [];
+                    const notFound = [];
+                    if (values.length < 2) {
+                        throw new Error('Invalid input, must be passed more than 1 value');
+                    }
+                    values.forEach((value) => {
+                        const vector = model[value];
+                        if (!vector) {
+                            notFound.push(value);
+                        } else {
+                            vectors.push(vector);
+                        }
+                    });
+
+                    if (notFound.length > 0) {
+                        throw new Error(`Invalid input, vector not found for: ${notFound.toString()}`);
+                    }
+                    let result = vectors[0];
+                    if (operation === 'ADD') {
+                        for (let i = 1; i < vectors.length; i += 1) {
+                            result = tf.add(result, vectors[i]);
+                        }
+                    } else {
+                        for (let i = 1; i < vectors.length; i += 1) {
+                            result = tf.sub(result, vectors[i]);
+                        }
+                    }
+                    return result;
+                });
+            }
+
+            static nearest(model, input, start, max) {
+                const nearestVectors = [];
+                Object.keys(model).forEach((word) => {
+                    const distance = tf.util.distSquared(input.dataSync(), model[word].dataSync());
+                    nearestVectors.push({
+                        word,
+                        distance
+                    });
+                });
+                nearestVectors.sort((a, b) => a.distance - b.distance);
+                return nearestVectors.slice(start, max);
+            }
+        }
+
+        const word2vec = (model, cb) => new Word2Vec(model, cb);
+
+        // const wordVectors = word2vec("word2vec/wordvecs1000.json", modelLoaded);
+        // const wordVectors = word2vec("word2vec/wordvecs10000.json", modelLoaded);
+        const wordVectors = word2vec("word2vec/wordvecs25000.json", modelLoaded);
+
+        // When the model is loaded
+        function modelLoaded() {
+
+            console.log("Model Loaded!");
+
+            document.querySelector(".loading").style.display = "none";
+
+            // For debugging purposes and testing the model directly from the console:
+            window.wordVectors = wordVectors;
+
+            // FIND NEAREST VECTOR:
+            document.querySelector("#find-nearest").addEventListener("click", (e) => {
+
+                const word   = document.querySelector("#nearest").value.trim();
+                const output = document.querySelector("#nearest-results");
+
+                if (word !== "") {
+                    output.value = "";
+                    wordVectors.nearest( word, function(err, results) {
+                        if ( err || !results ) return output.value = "Error: no results. Try another word.";
+                        results.forEach( (result,idx) => {
+                            console.log( result );
+                            output.value += `${result.word} [Distance: ${result.distance.toFixed(2)}]\n`
+                        })
+                    });
+                }
+
+            });
+
+            // FIND SIMILARITY
+            document.querySelector("#calc-similarity").addEventListener("click", ()=>{
+
+                const wordA  = document.querySelector("#word-a").value.trim();
+                const wordB  = document.querySelector("#word-b").value.trim();
+                const output = document.querySelector("#similarity");
+
+                if ( wordA !== "" && wordB !== "" ){
+                    wordVectors.similarity( wordA, wordB )
+                    .then(res => ( console.log(res), output.value = Math.floor( res * 100 ) + "%" ) );
+                }
+            });
+
+            // ADD VECTORS:
+            document.querySelector("#add").addEventListener("click", ()=>{
+                const wordA = document.querySelector("#add-word-a").value.toLowerCase().trim();
+                const wordB = document.querySelector("#add-word-b").value.toLowerCase().trim();
+                const sum   = document.querySelector("#sum");
+                if ( wordA !== "" && wordB !== "" ){
+                    // ADDITION:
+                    wordVectors.add([wordA, wordB]).then(res => ( console.log(res), sum.value = res[0].word ) ); 
+                }
+            });
+
+            // SUBTRACT VECTORS:
+            document.querySelector("#subtract").addEventListener("click", ()=>{
+                const wordA = document.querySelector("#sub-word-a").value.toLowerCase().trim();
+                const wordB = document.querySelector("#sub-word-b").value.toLowerCase().trim();
+                const diff  = document.querySelector("#difference");
+                if ( wordA !== "" && wordB !== "" ){
+                    wordVectors.subtract([wordA, wordB]).then(res => ( console.log(res), diff.value = res[0].word ) ); 
+                }
+            });
+
+            // ADD + SUBTRACT VECTORS (WORD ANALOGY):
+            document.querySelector("#run-analogy").addEventListener("click", ()=>{
+                const wordA  = document.querySelector("#analogyA").value.trim().toLowerCase();
+                const wordB  = document.querySelector("#analogyB").value.trim().toLowerCase();
+                const wordC  = document.querySelector("#analogyC").value.trim().toLowerCase();
+                const output = document.querySelector("#analogy");
+                if ( wordA !== "" && wordB !== "" && wordC !== "" ){
+
+                    wordVectors.subtract([ /* to1 */ wordA, /* is1 */ wordB ])
+                        .then(difference => wordVectors.add([ /* is2 */ wordC, difference[0].word]))
+                        .then(result => ( console.log(result), output.value = result[0].word )); 
+        
+                }
+
+            });
+
+        }
+    </script>
+</body>
+
+</html>
