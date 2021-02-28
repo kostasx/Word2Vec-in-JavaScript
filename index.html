@@ -482,13 +482,14 @@
 
 
     <script>
+
+        // Slightly modified version from: https://github.com/ml5js/ml5-library/blob/93e6024b8c912bc85a6d69f75b156cdeb46e3afb/src/Word2vec/index.js
         class Word2Vec {
-            constructor(modelPath, callback) {
+            constructor(modelPath) {
                 this.model = {};
                 this.modelPath = modelPath;
                 this.modelSize = 0;
                 this.modelLoaded = false;
-                this.callback = callback;
                 this.loadModel();
             }
 
@@ -501,7 +502,6 @@
                 });
                 this.modelSize = Object.keys(this.model).length;
                 this.modelLoaded = true;
-                this.callback();
                 return this;
             }
 
@@ -703,16 +703,14 @@
             }
         }
 
-        const word2vec = (model, cb) => new Word2Vec(model, cb);
+        async function init(){
+            
+            // 1.000 most common words: word2vec/wordvecs1000.json
+            // 10.000 most common words: word2vec/wordvecs10000.json
+            // 25.000 most common words:
 
-        // const wordVectors = word2vec("word2vec/wordvecs1000.json", modelLoaded);
-        // const wordVectors = word2vec("word2vec/wordvecs10000.json", modelLoaded);
-        const wordVectors = word2vec("word2vec/wordvecs25000.json", modelLoaded);
-
-        // When the model is loaded
-        function modelLoaded() {
-
-            console.log("Model Loaded!");
+            // Wait for model to load:
+            const wordVectors = await new Word2Vec("word2vec/wordvecs25000.json"); 
 
             document.querySelector(".loading").style.display = "none";
 
@@ -789,6 +787,8 @@
             });
 
         }
+
+        init();
     </script>
 </body>
 
