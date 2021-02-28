@@ -712,6 +712,8 @@
             // Wait for model to load:
             const wordVectors = await new Word2Vec("word2vec/wordvecs25000.json"); 
 
+            console.log("Model loaded...");
+
             document.querySelector(".loading").style.display = "none";
 
             // For debugging purposes and testing the model directly from the console:
